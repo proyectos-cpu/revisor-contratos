@@ -37,28 +37,16 @@ app.post('/api/analyze', upload.single('pdf'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No se recibio PDF' });
     const b64 = req.file.buffer.toString('base64');
 
-    const prompt = `Analiza este contrato de servicios y responde en DOS partes separadas por el delimitador ---JSON---
+    const prompt = `Analiza este contrato de servicios respondiendo estas 7 preguntas de forma detallada, con contexto, importes exactos, numeros de clausula y recomendaciones. Usa emojis para indicar estado (✅ correcto, ⚠️ atencion, ❌ problema). Responde en español.
 
-PARTE 1: Análisis detallado en español, explicando cada punto del checklist con contexto, cláusulas relevantes, alertas y recomendaciones. Usa emojis ✅ ⚠️ ❌ para indicar estado. Sé específico con importes, fechas y números de cláusula.
-
----JSON---
-
-PARTE 2: Responde SOLO con este JSON sin texto extra:
-{"q1":"SI|NO","q2":"forma de pago max 100 chars","q3":"SI|NO","q4":"SI|NO|NA","q5":"SI|NO|NA","q6":"SI|NO","q6c":"euros por dia o null","q7":"SI|NO","q7i":"YYYY-MM-DD o null","q7f":"YYYY-MM-DD o null"}
-
-Reglas JSON: q1=hay partidas con precios detallados, q2=describe forma de pago, q3=pago estandar ERP, q4=retencion con aval bancario NA si retencion es 0%, q5=NA si q4 es SI o NA, q6=hay penalizaciones por retraso, q6c=importe principal por dia, q7=hay fechas de inicio y fin.
-
-El analisis debe cubrir estas 7 preguntas:
 1. ¿Las partidas y precios corresponden al presupuesto aceptado?
-2. ¿Qué forma de pago hay?
+2. ¿Que forma de pago hay?
 3. ¿Es la que tiene el cliente en el ERP?
-4. ¿Si lleva retención, es con Aval Bancario?
-5. ¿Si es No, has preguntado para cambiar la retención por Aval Bancario?
-6. ¿Hay penalizaciones? ¿De cuánto?
-7. ¿Hay fecha de inicio y de finalización?`;
-
-    const r = await callAPI({
-      model: 'claude-haiku-4-5-20251001',
+4. ¿Si lleva retencion, es con Aval Bancario?
+5. ¿Si es No, se ha preguntado para cambiar la retencion por Aval Bancario?
+6. ¿Hay penalizaciones? ¿De cuanto?
+7. ¿Hay fecha de inicio y de finalizacion?`;
+    1',
       max_tokens: 1500,
       messages: [{ role: 'user', content: [
         { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
