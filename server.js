@@ -34,7 +34,7 @@ app.post('/api/analyze', upload.single('pdf'), async (req, res) => {
 q1=partidas con precios detallados. q2=describe forma de pago. q3=pago estandar ERP. q4=retencion con aval bancario (NA si retencion=0%). q5=NA si q4=SI/NA. q6=penalizaciones por retraso. q6c=euros/dia. q7=fechas inicio/fin. Solo JSON.`;
 
     const msg = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20251001',
       max_tokens: 400,
       messages: [{ role: 'user', content: [
         { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
@@ -58,7 +58,7 @@ app.post('/api/chat', async (req, res) => {
     const client = new Anthropic({ apiKey });
     const { messages } = req.body;
     const msg = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20251001',
       max_tokens: 900,
       system: 'Eres experto en contratos de servicios. Responde en español. Señala riesgos si los detectas.',
       messages
