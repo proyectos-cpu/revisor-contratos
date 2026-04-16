@@ -36,7 +36,6 @@ app.post('/api/analyze', upload.single('pdf'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No se recibio PDF' });
     const b64 = req.file.buffer.toString('base64');
-
     const prompt = `Analiza este contrato de servicios respondiendo estas 7 preguntas de forma detallada, con contexto, importes exactos, numeros de clausula y recomendaciones. Usa emojis para indicar estado (✅ correcto, ⚠️ atencion, ❌ problema). Responde en español.
 
 1. ¿Las partidas y precios corresponden al presupuesto aceptado?
@@ -46,23 +45,17 @@ app.post('/api/analyze', upload.single('pdf'), async (req, res) => {
 5. ¿Si es No, se ha preguntado para cambiar la retencion por Aval Bancario?
 6. ¿Hay penalizaciones? ¿De cuanto?
 7. ¿Hay fecha de inicio y de finalizacion?`;
-    1',
+
+    const r = await callAPI({
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 1500,
       messages: [{ role: 'user', content: [
         { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
         { type: 'text', text: prompt }
       ]}]
     });
-
     if (r.status !== 200) return res.status(r.status).json({ error: r.body });
-
-    const full  = r.body.content[0].text;
-    const parts = full.split('---JSON---');
-    const analysis = parts[0].trim();
-    const jsonPart  = parts[1] ? parts[1].trim() : '{}';
-    const json = JSON.parse(jsonPart.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/)[0]);
-
-    res.json({ analysis, checklist: json });
+    res.json({ analysis: r.body.content[0].text });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
