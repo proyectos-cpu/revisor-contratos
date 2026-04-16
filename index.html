@@ -253,30 +253,40 @@ header small{font-size:11px;color:#a09890;letter-spacing:.14em;text-transform:up
 
   // ANALYZE
   async function doAnalyze() {
-    if(!pdfFile) return;
-    hideErr(); setStatus('spin','Analizando contrato…');
-    const btn = document.getElementById('analyzeBtn');
-    btn.disabled=true;
-    btn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> Analizando…`;
-    try {
-      const fd = new FormData();
-      fd.append('pdf', pdfFile);
-      const res = await fetch('/api/analyze', { method:'POST', body:fd });
-      if (!res.ok) { const e=await res.json(); throw new Error(e.error||'Error del servidor'); }
-      const r = await res.json();
-      if(r.q1) setyn(1,r.q1);
-      if(r.q2){document.getElementById('q2').value=r.q2;oo();}
-      if(r.q3) setyn(3,r.q3);
-      if(r.q4&&r.q4!=='NA') setyn(4,r.q4);
-      if(r.q5&&r.q5!=='NA') setyn(5,r.q5);
-      if(r.q6){setyn(6,r.q6);if(r.q6==='SI'&&r.q6c)document.getElementById('q6c').value=r.q6c;}
-      if(r.q7){setyn(7,r.q7);if(r.q7==='SI'){if(r.q7i)document.getElementById('q7i').value=r.q7i;if(r.q7f)document.getElementById('q7f').value=r.q7f;}}
-      setStatus('ok','Análisis completado'); uprog();
-    } catch(e) { showErr(e.message); setStatus('err','Error'); }
-    btn.disabled=false;
-    btn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg> Analizar y rellenar`;
-  }
+  if (!pdfFile) return;
+  hideErr(); setStatus('spin', 'Analizando contrato…');
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span style="animation:spin 1s linear infinite;display:inline-block">⟳</span> Analizando…';
 
+  try {
+    const fd = new FormData();
+    fd.append('pdf', pdfFile);
+    const res = await fetch('/api/analyze', { method: 'POST', body: fd });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Error del servidor'); }
+    const data = await res.json();
+
+    // Mostrar análisis en el chat
+    switchTab('chat');
+    document.getElementById('emptyChat').style.display = 'none';
+    addMsg('bot', fmt(data.analysis));
+
+    // Rellenar checklist
+    const r = data.checklist;
+    if (r.q1) setyn(1, r.q1);
+    if (r.q2) { document.getElementById('q2').value = r.q2; oo(); }
+    if (r.q3) setyn(3, r.q3);
+    if (r.q4 && r.q4 !== 'NA') setyn(4, r.q4);
+    if (r.q5 && r.q5 !== 'NA') setyn(5, r.q5);
+    if (r.q6) { setyn(6, r.q6); if (r.q6 === 'SI' && r.q6c) document.getElementById('q6c').value = r.q6c; }
+    if (r.q7) { setyn(7, r.q7); if (r.q7 === 'SI') { if (r.q7i) document.getElementById('q7i').value = r.q7i; if (r.q7f) document.getElementById('q7f').value = r.q7f; } }
+
+    setStatus('ok', 'Análisis completado'); uprog();
+  } catch(e) { showErr(e.message); setStatus('err', 'Error'); }
+
+  btn.disabled = false;
+  btn.innerHTML = '✦ Analizar y rellenar';
+}
   // CHECKLIST
   function setyn(q,v){ans[q]=v;const c=document.getElementById('c'+q);c.querySelectorAll('.yn-btn').forEach(b=>b.classList.remove('sy','sn'));if(v==='SI'){c.querySelectorAll('.yn-btn')[0].classList.add('sy');c.className='qcard yes';}else{c.querySelectorAll('.yn-btn')[1].classList.add('sn');c.className='qcard no';}if(q===6)document.getElementById('s6').style.display=v==='SI'?'block':'none';if(q===7)document.getElementById('s7').style.display=v==='SI'?'block':'none';uprog();}
   function oo(){const v=document.getElementById('q2').value.trim();ans[2]=v||null;document.getElementById('c2').className='qcard'+(v?' txt':'');uprog();}
