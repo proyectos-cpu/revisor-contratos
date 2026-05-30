@@ -36,50 +36,46 @@ app.post('/api/analyze', upload.single('pdf'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No se recibio PDF' });
     const b64 = req.file.buffer.toString('base64');
-    const prompt = `Lee este contrato. COMON S.L. es siempre el subcontratista. La otra parte es el cliente al que facturamos.
+    const doc = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } };
 
-Tu respuesta DEBE empezar SIEMPRE con el bloque de datos del cliente, exactamente asi:
-
-CLIENTE: [nombre completo de la empresa cliente]
-NIF: [nif del cliente]
-DIRECCION: [direccion completa del cliente]
-REPRESENTANTE: [nombre y cargo del representante del cliente]
-
----
-
-Luego responde estas 7 preguntas de forma breve. Usa emojis de estado (OK, ATENCION, PROBLEMA). Incluye importes exactos, fechas y numeros de clausula.
-
-1. Las partidas y precios corresponden al presupuesto aceptado?
-[respuesta breve con importe total]
-
-2. Forma de pago
-[metodo, plazo y dia de vencimiento]
-
-3. Es la que tiene el cliente en el ERP?
-[respuesta breve]
-
-4. Retencion con Aval Bancario?
-[% de retencion y si hay aval]
-
-5. Cambio de retencion por Aval?
-[respuesta breve]
-
-6. Hay penalizaciones? De cuanto?
-[lista con cada penalizacion, importe y clausula]
-
-7. Hay fecha de inicio y de finalizacion?
-[fechas concretas]`;
-
-    const r = await callAPI({
+    // Llamada 1: extraer datos del cliente
+    const r1 = await callAPI({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1000,
+      max_tokens: 200,
       messages: [{ role: 'user', content: [
-        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
-        { type: 'text', text: prompt }
+        doc,
+        { type: 'text', text: 'En este contrato COMON S.L. es el subcontratista. Extrae los datos de LA OTRA PARTE (el cliente/contratista principal). Responde SOLO con este formato exacto, sin texto adicional:\nEmpresa: [nombre]\nNIF: [nif]\nDireccion: [direccion]\nRepresentante: [nombre y cargo]' }
       ]}]
     });
-    if (r.status !== 200) return res.status(r.status).json({ error: r.body });
-    res.json({ analysis: r.body.content[0].text });
+
+    // Llamada 2: analisis de las 7 preguntas
+    const r2 = await callAPI({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 900,
+      messages: [{ role: 'user', content: [
+        doc,
+        { type: 'text', text: `Analiza este contrato. COMON S.L. es el subcontratista. Responde en español estas 7 preguntas de forma breve. Usa emojis (✅ ⚠️ ❌). Incluye importes, fechas y clausulas.
+
+1. ¿Las partidas y precios corresponden al presupuesto aceptado?
+
+2. Forma de pago
+
+3. ¿Es la que tiene el cliente en el ERP?
+
+4. ¿Retencion con Aval Bancario?
+
+5. ¿Cambio de retencion por Aval?
+
+6. ¿Hay penalizaciones? ¿De cuanto?
+
+7. ¿Hay fecha de inicio y de finalizacion?` }
+      ]}]
+    });
+
+    const cliente = r1.status === 200 ? r1.body.content[0].text : 'No disponible';
+    const analisis = r2.status === 200 ? r2.body.content[0].text : JSON.stringify(r2.body);
+
+    res.json({ cliente, analisis });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -88,7 +84,7 @@ app.post('/api/chat', async (req, res) => {
     const r = await callAPI({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 900,
-      system: 'Eres experto en contratos de servicios. COMON S.L. es siempre el subcontratista. La otra parte es el cliente. Responde en español de forma concisa. Señala riesgos si los detectas.',
+      system: 'Eres experto en contratos de servicios. COMON S.L. es el subcontratista. La otra parte es el cliente. Responde en español de forma concisa.',
       messages: req.body.messages
     });
     if (r.status !== 200) return res.status(r.status).json({ error: r.body });
