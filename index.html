@@ -126,23 +126,20 @@ async function doAnalyze(){
     if(!res.ok){const e=await res.json();throw new Error(JSON.stringify(e.error||e));}
     const data=await res.json();
     document.getElementById('emptyState').style.display='none';
-    renderAnalysis(data.analysis);
+    renderAnalysis(data.cliente, data.analisis);
     setStatus('ok','Analisis completado');
   }catch(e){showErr(e.message);setStatus('err','Error');}
   btn.disabled=false;btn.textContent='Analizar contrato';
 }
-function renderAnalysis(text){
+function renderAnalysis(cliente, analisis){
   const ca=document.getElementById('chatArea');
   const d=document.createElement('div');d.className='msg bot';
-  let clientHtml='';let bodyText=text;
-  const m=text.match(/**DATOS DEL CLIENTE**([sS]*?)(?=---|He leido|**1.)/);
-  if(m){
-    const lines=m[1].trim().split('
-').filter(l=>l.trim());
-    clientHtml='<div class="client-box"><div class="ctitle">Datos del cliente</div>'+lines.map(l=>'<p>'+l.replace(/**/g,'').trim()+'</p>').join('')+'</div>';
-    bodyText=text.replace(/**DATOS DEL CLIENTE**[sS]*?(?=---|He leido|**1.)/,'');
+  let clientHtml='';
+  if(cliente){
+    const lines=cliente.trim().split('\n').filter(l=>l.trim());
+    clientHtml='<div class="client-box"><div class="ctitle">Datos del cliente<\/div>'+lines.map(l=>'<p>'+l.replace(/\*\*/g,'').trim()+'<\/p>').join('')+'<\/div>';
   }
-  d.innerHTML='<div class="av ba">IA</div><div class="bubble">'+clientHtml+fmt(bodyText)+'</div>';
+  d.innerHTML='<div class="av ba">IA<\/div><div class="bubble">'+clientHtml+fmt(analisis)+'<\/div>';
   ca.appendChild(d);ca.scrollTop=ca.scrollHeight;
 }
 function sq(txt){if(!pdfB64){alert('Primero sube un PDF');return;}document.getElementById('chatTxt').value=txt;doSend();}
