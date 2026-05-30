@@ -8,105 +8,92 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 app.use(express.json({ limit: '25mb' }));
 
 function callAPI(body) {
-    return new Promise((resolve, reject) => {
-          const key  = process.env.ANTHROPIC_API_KEY || '';
-          const data = JSON.stringify(body);
-          const req  = https.request({
-                  hostname: 'api.anthropic.com',
-                  path: '/v1/messages',
-                  method: 'POST',
-                  headers: {
-                            'Content-Type': 'application/json',
-                            'x-api-key': key,
-                            'anthropic-version': '2023-06-01',
-                            'Content-Length': Buffer.byteLength(data)
-                  }
-          }, res => {
-                  let raw = '';
-                  res.on('data', c => raw += c);
-                  res.on('end', () => resolve({ status: res.statusCode, body: JSON.parse(raw) }));
-          });
-          req.on('error', reject);
-          req.write(data);
-          req.end();
+  return new Promise((resolve, reject) => {
+    const key  = process.env.ANTHROPIC_API_KEY || '';
+    const data = JSON.stringify(body);
+    const req  = https.request({
+      hostname: 'api.anthropic.com',
+      path: '/v1/messages',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'Content-Length': Buffer.byteLength(data)
+      }
+    }, res => {
+      let raw = '';
+      res.on('data', c => raw += c);
+      res.on('end', () => resolve({ status: res.statusCode, body: JSON.parse(raw) }));
     });
+    req.on('error', reject);
+    req.write(data);
+    req.end();
+  });
 }
 
 app.post('/api/analyze', upload.single('pdf'), async (req, res) => {
-    try {
-          if (!req.file) return res.status(400).json({ error: 'No se recibio PDF' });
-          const b64 = req.file.buffer.toString('base64');
-          const prompt = `Lee este contrato. COMON S.L. es siempre el subcontratista o proveedor. La otra parte es el cliente al que facturamos.
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No se recibio PDF' });
+    const b64 = req.file.buffer.toString('base64');
+    const prompt = `Lee este contrato. COMON S.L. es siempre el subcontratista. La otra parte es el cliente al que facturamos.
 
-          Responde en español siguiendo EXACTAMENTE este formato:
+Tu respuesta DEBE empezar SIEMPRE con el bloque de datos del cliente, exactamente asi:
 
-          **DATOS DEL CLIENTE**
-          Empresa: [nombre completo]
-          NIF: [nif]
-          Direccion: [direccion completa]
-          Representante: [nombre y cargo]
+CLIENTE: [nombre completo de la empresa cliente]
+NIF: [nif del cliente]
+DIRECCION: [direccion completa del cliente]
+REPRESENTANTE: [nombre y cargo del representante del cliente]
 
-          ---
+---
 
-          He leido el contrato completo.
+Luego responde estas 7 preguntas de forma breve. Usa emojis de estado (OK, ATENCION, PROBLEMA). Incluye importes exactos, fechas y numeros de clausula.
 
-          **1. Las partidas y precios corresponden al presupuesto aceptado?**
-          [respuesta breve con importe total si aparece]
+1. Las partidas y precios corresponden al presupuesto aceptado?
+[respuesta breve con importe total]
 
-          ---
+2. Forma de pago
+[metodo, plazo y dia de vencimiento]
 
-          **2. Forma de pago**
-          [metodo, plazo y dia de vencimiento]
+3. Es la que tiene el cliente en el ERP?
+[respuesta breve]
 
-          ---
+4. Retencion con Aval Bancario?
+[% de retencion y si hay aval]
 
-          **3. Es la que tiene el cliente en el ERP?**
-          [respuesta breve]
+5. Cambio de retencion por Aval?
+[respuesta breve]
 
-          ---
+6. Hay penalizaciones? De cuanto?
+[lista con cada penalizacion, importe y clausula]
 
-          **4. Retencion con Aval Bancario?**
-          [% de retencion y si hay aval]
+7. Hay fecha de inicio y de finalizacion?
+[fechas concretas]`;
 
-          ---
-
-          **5. Cambio de retencion por Aval?**
-          [respuesta breve]
-
-          ---
-
-          **6. Hay penalizaciones? De cuanto?**
-          [lista con cada penalizacion, importe y clausula]
-
-          ---
-
-          **7. Hay fecha de inicio y de finalizacion?**
-          [fechas concretas una por linea]`;
-
-      const r = await callAPI({
-              model: 'claude-haiku-4-5-20251001',
-              max_tokens: 1000,
-              messages: [{ role: 'user', content: [
-                { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
-                { type: 'text', text: prompt }
-                      ]}]
-      });
-          if (r.status !== 200) return res.status(r.status).json({ error: r.body });
-          res.json({ analysis: r.body.content[0].text });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+    const r = await callAPI({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: [
+        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
+        { type: 'text', text: prompt }
+      ]}]
+    });
+    if (r.status !== 200) return res.status(r.status).json({ error: r.body });
+    res.json({ analysis: r.body.content[0].text });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/chat', async (req, res) => {
-    try {
-          const r = await callAPI({
-                  model: 'claude-haiku-4-5-20251001',
-                  max_tokens: 900,
-                  system: 'Eres experto en contratos de servicios. COMON S.L. es siempre el subcontratista o proveedor. La otra parte es el cliente. Responde en español de forma concisa. Señala riesgos si los detectas.',
-                  messages: req.body.messages
-          });
-          if (r.status !== 200) return res.status(r.status).json({ error: r.body });
-          res.json({ reply: r.body.content[0].text });
-    } catch(e) { res.status(500).json({ error: e.message }); }
+  try {
+    const r = await callAPI({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 900,
+      system: 'Eres experto en contratos de servicios. COMON S.L. es siempre el subcontratista. La otra parte es el cliente. Responde en español de forma concisa. Señala riesgos si los detectas.',
+      messages: req.body.messages
+    });
+    if (r.status !== 200) return res.status(r.status).json({ error: r.body });
+    res.json({ reply: r.body.content[0].text });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
