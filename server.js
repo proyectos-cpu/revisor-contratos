@@ -30,7 +30,7 @@ app.post('/api/analyze', upload.single('pdf'), async (req, res) => {
     const doc = { type:'document', source:{ type:'base64', media_type:'application/pdf', data:b64 } };
     const [r1, r2] = await Promise.all([
       callAPI({ model:'claude-haiku-4-5-20251001', max_tokens:200,
-        messages:[{ role:'user', content:[doc, { type:'text', text:'En este contrato COMON S.L. es el subcontratista. Extrae los datos del CONTRATISTA (el cliente que nos contrata). Responde SOLO con este formato sin texto adicional:\nEmpresa: [nombre]\nNIF: [nif]\nDireccion: [direccion]\nRepresentante: [nombre y cargo]' }]}]
+        messages:[{ role:'user', content:[doc, { type:'text', text: 'Lee la seccion CONTRATISTA de este contrato. Copia exactamente estos 4 datos sin cambiar nada:\nEmpresa: [copia el valor del campo Empresa]\nNIF: [copia el valor del campo N.I.F]\nDireccion: [copia Domicilio Social, Distrito Postal y Localidad]\nRepresentante: [copia el nombre del Representante y su Titulo]' }]}]
       }),
       callAPI({ model:'claude-haiku-4-5-20251001', max_tokens:900,
         messages:[{ role:'user', content:[doc, { type:'text', text:'Analiza este contrato. COMON S.L. es el subcontratista. Responde en espanol estas 7 preguntas brevemente usando emojis. Incluye importes, fechas y clausulas.\n\n1. Las partidas y precios corresponden al presupuesto aceptado?\n\n2. Forma de pago\n\n3. Es la que tiene el cliente en el ERP?\n\n4. Retencion con Aval Bancario?\n\n5. Cambio de retencion por Aval?\n\n6. Hay penalizaciones? De cuanto?\n\n7. Hay fecha de inicio y de finalizacion?' }]}]
