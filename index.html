@@ -71,6 +71,9 @@ header small{font-size:11px;color:#a09890;letter-spacing:.14em;text-transform:up
 .send-btn:hover:not(:disabled){background:var(--accent-d);}
 .send-btn:disabled{background:var(--border);cursor:not-allowed;}
 .hint{font-size:11px;color:var(--muted);margin-top:6px;text-align:right;}
+.client-box{background:#fff8f5;border:1px solid #f0c0a8;border-left:4px solid var(--accent);border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:13px;line-height:2;}
+.client-box .ctitle{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;}
+.client-box p{margin:2px 0;color:var(--ink);}
 ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
@@ -126,20 +129,18 @@ async function doAnalyze(){
     if(!res.ok){const e=await res.json();throw new Error(JSON.stringify(e.error||e));}
     const data=await res.json();
     document.getElementById('emptyState').style.display='none';
-    renderAnalysis(data.cliente, data.analisis);
+    mostrarResultado(data.cliente, data.analisis);
     setStatus('ok','Analisis completado');
   }catch(e){showErr(e.message);setStatus('err','Error');}
   btn.disabled=false;btn.textContent='Analizar contrato';
 }
-function renderAnalysis(cliente, analisis){
-  const ca=document.getElementById('chatArea');
-  const d=document.createElement('div');d.className='msg bot';
-  let cbox='';
-  if(cliente&&cliente.trim()&&cliente.length>5){
-    const lines=cliente.trim().split('\n').filter(l=>l.trim()&&l.length>2);
-    if(lines.length>0){
-      cbox='<div class="client-box"><div class="ctitle">Cliente que nos contrata</div>'+lines.map(l=>'<p>'+l.replace(/\*\*/g,'').trim()+'</p>').join('')+'</div>';
-    }
+function mostrarResultado(cliente, analisis){
+  var ca=document.getElementById('chatArea');
+  var d=document.createElement('div');d.className='msg bot';
+  var cbox='';
+  if(cliente && cliente.trim().length>5){
+    var lines=cliente.trim().split('\n').filter(function(l){return l.trim().length>2;});
+    cbox='<div class="client-box"><div class="ctitle">Cliente que nos contrata</div>'+lines.map(function(l){return '<p>'+l.replace(/\*\*/g,'').trim()+'</p>';}).join('')+'</div>';
   }
   d.innerHTML='<div class="av ba">IA</div><div class="bubble">'+cbox+fmt(analisis||'')+'</div>';
   ca.appendChild(d);ca.scrollTop=ca.scrollHeight;
