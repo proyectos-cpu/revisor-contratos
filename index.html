@@ -134,12 +134,14 @@ async function doAnalyze(){
 function renderAnalysis(cliente, analisis){
   const ca=document.getElementById('chatArea');
   const d=document.createElement('div');d.className='msg bot';
-  let clientHtml='';
-  if(cliente){
-    const lines=cliente.trim().split('\n').filter(l=>l.trim());
-    clientHtml='<div class="client-box"><div class="ctitle">Datos del cliente<\/div>'+lines.map(l=>'<p>'+l.replace(/\*\*/g,'').trim()+'<\/p>').join('')+'<\/div>';
+  let cbox='';
+  if(cliente&&cliente.trim()&&cliente.length>5){
+    const lines=cliente.trim().split('\n').filter(l=>l.trim()&&l.length>2);
+    if(lines.length>0){
+      cbox='<div class="client-box"><div class="ctitle">Cliente que nos contrata</div>'+lines.map(l=>'<p>'+l.replace(/\*\*/g,'').trim()+'</p>').join('')+'</div>';
+    }
   }
-  d.innerHTML='<div class="av ba">IA<\/div><div class="bubble">'+clientHtml+fmt(analisis)+'<\/div>';
+  d.innerHTML='<div class="av ba">IA</div><div class="bubble">'+cbox+fmt(analisis||'')+'</div>';
   ca.appendChild(d);ca.scrollTop=ca.scrollHeight;
 }
 function sq(txt){if(!pdfB64){alert('Primero sube un PDF');return;}document.getElementById('chatTxt').value=txt;doSend();}
